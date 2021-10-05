@@ -1,7 +1,4 @@
 import numpy as np
-from torch import tensor, arange, meshgrid, floor, cat, clamp, einsum
-from torch import long as lg
-from torch import float as ft
 from PIL import Image
 
 class Pic_Transformations:
@@ -46,65 +43,73 @@ class Pic_Transformations:
         return self.image_adj(outputs)
 
     def bilinear_transform(self, inputs, size=[600, 1100]):
-        img = tensor(inputs)
-        sizeOri = tensor(img.shape)
-        size = tensor(size)
+        img = inputs
+        sizeOri = np.array(img.shape)
+        size = np.array(size)
         adjLen = (sizeOri - 1) / (size - 1)
-        height = arange(size[0]) * adjLen[0]
-        width = arange(size[1]) * adjLen[1]
-        meshH, meshW = meshgrid(height, width)
-        meshHI, meshWI = floor(meshH), floor(meshW)       # 轉化後像素點的整數部分(對應原圖左邊或上方的點)
+        height = np.arange(size[0]) * adjLen[0]
+        width = np.arange(size[1]) * adjLen[1]
+        meshH, meshW = np.meshgrid(height, width)
+        meshH, meshW = meshH.transpose(), meshW.transpose()
+        meshHI, meshWI = np.floor(meshH), np.floor(meshW)       # 轉化後像素點的整數部分(對應原圖左邊或上方的點)
         meshWL = meshW - meshWI         # x 的第一個元素
         meshHL = meshH - meshHI         # y 的第一個元素
         meshWR = 1 - meshWL             # x 的第二個元素
         meshHR = 1 - meshHL
-        x = cat([meshWL.unsqueeze(2), meshWR.unsqueeze(2)], dim=2).unsqueeze(2)
-        y = cat([meshHL.unsqueeze(2), meshHR.unsqueeze(2)], dim=2).unsqueeze(2)
-        meshQW = cat([meshWI.unsqueeze(2), (meshWI+1).unsqueeze(2)], dim=2).type(lg)   # index 要求 Q 用的
-        meshQH = cat([meshHI.unsqueeze(2), (meshHI+1).unsqueeze(2)], dim=2).type(lg)
+        x = np.concatenate([np.expand_dims(meshWL, axis=2), np.expand_dims(meshWR, axis=2)], axis=2)
+        x = np.expand_dims(x, axis=2)
+        y = np.concatenate([np.expand_dims(meshHL, axis=2), np.expand_dims(meshHR, axis=2)], axis=2)
+        y = np.expand_dims(y, axis=2)
+        meshQW = np.concatenate([np.expand_dims(meshWI, axis=2), np.expand_dims(meshWI+1, axis=2)], axis=2).astype('long')   # index 要求 Q 用的
+        meshQH = np.concatenate([np.expand_dims(meshHI, axis=2), np.expand_dims(meshHI+1, axis=2)], axis=2).astype('long')
         mh, mw = sizeOri[0] - 1, sizeOri[1] - 1
-        meshQW, meshQH = clamp(meshQW, max=mw), clamp(meshQH, max=mh)
+        meshQW, meshQH = np.clip(meshQW, a_max=mw, a_min=0), np.clip(meshQH, a_max=mh, a_min=0)
         meshQ = []   # 對應一個像素要計算的元途中四個點
         for i in range(1, -1, -1):
             for j in range(1, -1, -1):
                 w = meshQW[:, :, i]
                 h = meshQH[:, :, j]
-                meshQ.append(img[h, w].unsqueeze(2))
-        meshQ = cat(meshQ, dim=2)
+                meshQ.append(np.expand_dims(img[h, w], axis=2))
+
+        meshQ = np.concatenate(meshQ, axis=2)
         a, b, c = meshQ.shape
-        meshQ = meshQ.view(a, b, 2, 2).type(ft)
-        temp = einsum('ijkl, ijlh->ijkh', x, meshQ)
-        outputs = einsum('ijkl, ijfl->ijkf', temp, y).squeeze()
-        return outputs.numpy().astype('uint8')
+        meshQ = meshQ.reshape([a, b, 2, 2]).astype('float')
+        temp = np.einsum('ijkl, ijlh->ijkh', x, meshQ)
+        outputs = np.einsum('ijkl, ijfl->ijkf', temp, y).squeeze()
+        return outputs.astype('uint8')
 
     def nearest_transform(self, inputs, size=[600, 1100]):
-        img = tensor(inputs)
-        sizeOri = tensor(img.shape)
-        size = tensor(size)
+        img = inputs
+        sizeOri = np.array(img.shape)
+        size = np.array(size)
         adjLen = (sizeOri - 1) / (size - 1)
-        height = arange(size[0]) * adjLen[0]
-        width = arange(size[1]) * adjLen[1]
-        meshH, meshW = meshgrid(height, width)
-        meshHI, meshWI = floor(meshH), floor(meshW)       # 轉化後像素點的整數部分(對應原圖左邊或上方的點)
+        height = np.arange(size[0]) * adjLen[0]
+        width = np.arange(size[1]) * adjLen[1]
+        meshH, meshW = np.meshgrid(height, width)
+        meshH, meshW = meshH.transpose(), meshW.transpose()
+        meshHI, meshWI = np.floor(meshH), np.floor(meshW)       # 轉化後像素點的整數部分(對應原圖左邊或上方的點)
         meshWL = ((meshW - meshWI) > 0.5) + 0.         # x 的第一個元素
         meshHL = ((meshH - meshHI) > 0.5) + 0.         # y 的第一個元素
         meshWR = 1 - meshWL             # x 的第二個元素
         meshHR = 1 - meshHL
-        x = cat([meshWL.unsqueeze(2), meshWR.unsqueeze(2)], dim=2).unsqueeze(2)
-        y = cat([meshHL.unsqueeze(2), meshHR.unsqueeze(2)], dim=2).unsqueeze(2)
-        meshQW = cat([meshWI.unsqueeze(2), (meshWI+1).unsqueeze(2)], dim=2).type(lg)   # index 要求 Q 用的
-        meshQH = cat([meshHI.unsqueeze(2), (meshHI+1).unsqueeze(2)], dim=2).type(lg)
+        x = np.concatenate([np.expand_dims(meshWL, axis=2), np.expand_dims(meshWR, axis=2)], axis=2)
+        x = np.expand_dims(x, axis=2)
+        y = np.concatenate([np.expand_dims(meshHL, axis=2), np.expand_dims(meshHR, axis=2)], axis=2)
+        y = np.expand_dims(y, axis=2)
+        meshQW = np.concatenate([np.expand_dims(meshWI, axis=2), np.expand_dims(meshWI+1, axis=2)], axis=2).astype('long')   # index 要求 Q 用的
+        meshQH = np.concatenate([np.expand_dims(meshHI, axis=2), np.expand_dims(meshHI+1, axis=2)], axis=2).astype('long')
         mh, mw = sizeOri[0] - 1, sizeOri[1] - 1
-        meshQW, meshQH = clamp(meshQW, max=mw), clamp(meshQH, max=mh)
+        meshQW, meshQH = np.clip(meshQW, a_max=mw, a_min=0), np.clip(meshQH, a_max=mh, a_min=0)
         meshQ = []   # 對應一個像素要計算的元途中四個點
         for i in range(1, -1, -1):
             for j in range(1, -1, -1):
                 w = meshQW[:, :, i]
                 h = meshQH[:, :, j]
-                meshQ.append(img[h, w].unsqueeze(2))
-        meshQ = cat(meshQ, dim=2)
+                meshQ.append(np.expand_dims(img[h, w], axis=2))
+
+        meshQ = np.concatenate(meshQ, axis=2)
         a, b, c = meshQ.shape
-        meshQ = meshQ.view(a, b, 2, 2).type(ft)
-        temp = einsum('ijkl, ijlh->ijkh', x, meshQ)
-        outputs = einsum('ijkl, ijfl->ijkf', temp, y).squeeze()
-        return outputs.numpy().astype('uint8')
+        meshQ = meshQ.reshape([a, b, 2, 2]).astype('float')
+        temp = np.einsum('ijkl, ijlh->ijkh', x, meshQ)
+        outputs = np.einsum('ijkl, ijfl->ijkf', temp, y).squeeze()
+        return outputs.astype('uint8')
