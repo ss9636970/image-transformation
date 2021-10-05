@@ -1,7 +1,7 @@
 # HW1-image transformation
 
 # 1.  檔案說明
-這次作業使用python只做，檔案列有兩個資料夾source_code、HW1_exe，source_code為原始碼裡面包含兩個py檔UI.py、utils.py，utils.py中包含作業要求的所有轉換方法，UI.py中包含將所有轉換方法執行的使用者介面，HW1_exe中有一個資料夾為dist，裡面有個UI.exe為這次作業的執行檔，這個執行檔適用python的pyinstaller將原始碼UI.py包成exe執行檔，開啟UI.exe即可執行這次作業的程式碼，底下為執行UI.py後的使用者介面使用方式說明。
+這次作業使用python只做，檔案列有兩個資料夾source_code、HW1_exe，source_code為原始碼裡面包含兩個py檔UI.py、utils.py，utils.py中包含作業要求的所有轉換方法，UI.py中包含將所有轉換方法執行的使用者介面，HW1_exe中有一個資料夾為dist，裡面有個檔案連結到google雲端，連結中有個UI.exe為這次作業的執行檔，這個執行檔是用python的pyinstaller將原始碼UI.py包成exe執行檔，開啟UI.exe即可執行這次作業的程式碼，底下為執行UI.py後的使用者介面使用方式說明。
 
 
 
